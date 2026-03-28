@@ -3,123 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scrapbook Flipbook</title>
+<title>Digital Scrapbook</title>
 
 <style>
 body {
     margin: 0;
-    font-family: 'Comic Sans MS', cursive;
-    background: #e9e4dc;
+    background: linear-gradient(135deg,#6c6f8a,#4a4e69);
     display: flex;
     flex-direction: column;
     align-items: center;
+    font-family: sans-serif;
 }
 
 /* Upload */
-#drop-zone {
+#upload {
     margin: 15px;
-    padding: 20px;
-    border: 2px dashed #b8a99a;
-    border-radius: 12px;
-    background: #fffaf5;
+    padding: 10px 15px;
+    background: white;
+    border-radius: 10px;
     cursor: pointer;
 }
 
-/* Book */
-#book {
-    width: 340px;
-    height: 480px;
-    perspective: 1200px;
+/* Book container */
+.book {
+    width: 700px;
+    height: 450px;
     position: relative;
+    perspective: 2000px;
 }
 
-/* Page */
-.page {
+/* Spread */
+.spread {
     width: 100%;
     height: 100%;
+    display: flex;
     position: absolute;
-    transform-origin: left;
-    transition: transform 0.7s ease;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-.page.flipped {
+/* Pages */
+.page {
+    width: 50%;
+    height: 100%;
+    background: #fdfaf6;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* Spine */
+.page.left {
+    border-right: 2px solid #ddd;
+}
+.page.right {
+    border-left: 2px solid #ddd;
+}
+
+/* Flip animation */
+.spread {
+    transform-origin: left;
+    transition: transform 0.8s ease;
+}
+.spread.flipped {
     transform: rotateY(-180deg);
 }
 
-/* Page content */
-.page-content {
+/* Photo */
+.photo {
+    position: absolute;
+    width: 120px;
+    cursor: grab;
+    transform: rotate(-3deg);
+}
+
+.photo img {
     width: 100%;
-    height: 100%;
-    position: relative;
-    padding: 10px;
-}
-
-/* Scrapbook paper */
-.paper {
-    background: #fdfaf6;
-    position: relative;
-}
-
-.paper::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: 
-        radial-gradient(circle at 10% 10%, #00000008 2px, transparent 3px),
-        radial-gradient(circle at 90% 80%, #00000008 2px, transparent 3px);
-    opacity: 0.4;
-}
-
-/* Photo frame */
-.photo-frame {
-    position: absolute;
-    width: 65%;
-    background: white;
-    padding: 10px 10px 25px;
+    border: 8px solid white;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.photo-frame img {
-    width: 100%;
 }
 
 /* Tape */
 .tape {
     position: absolute;
-    width: 80px;
-    height: 25px;
-    background: rgba(255,255,200,0.6);
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%) rotate(-6deg);
-}
-
-/* Torn paper */
-.torn {
-    position: absolute;
-    width: 80%;
-    height: 120px;
-    background: #fff;
-    clip-path: polygon(
-        0% 10%, 5% 0%, 95% 0%, 100% 10%,
-        95% 100%, 5% 100%, 0% 90%
-    );
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    width: 50px;
+    height: 15px;
+    background: rgba(255,255,200,0.7);
+    top: -10px;
+    left: 30%;
+    transform: rotate(-5deg);
 }
 
 /* Controls */
 #controls {
-    margin: 10px;
+    margin-top: 15px;
 }
 
 button {
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 10px;
+    margin: 5px;
     border: none;
-    background: #b8a99a;
+    border-radius: 6px;
+    background: white;
     cursor: pointer;
 }
 </style>
@@ -127,53 +110,85 @@ button {
 
 <body>
 
-<div id="drop-zone">📎 Add Memories</div>
-<input type="file" id="file-input" multiple accept="image/*" hidden>
+<div id="upload">📎 Upload Photos</div>
+<input type="file" id="fileInput" multiple accept="image/*" hidden>
 
-<div id="book"></div>
+<div class="book" id="book"></div>
 
 <div id="controls">
-    <button onclick="prevPage()">←</button>
-    <button onclick="nextPage()">→</button>
+    <button onclick="prev()">←</button>
+    <button onclick="next()">→</button>
 </div>
 
 <script>
-const fileInput = document.getElementById('file-input');
-const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('fileInput');
+const upload = document.getElementById('upload');
 const book = document.getElementById('book');
 
-let pages = [];
+let spreads = [];
 let current = 0;
 
 /* Upload */
-dropZone.onclick = () => fileInput.click();
+upload.onclick = () => fileInput.click();
 
-dropZone.ondragover = e => e.preventDefault();
+fileInput.onchange = (e) => {
+    const files = Array.from(e.target.files);
 
-dropZone.ondrop = e => {
-    e.preventDefault();
-    handleFiles(e.dataTransfer.files);
+    for (let i = 0; i < files.length; i += 3) {
+        const chunk = files.slice(i, i + 3);
+
+        const readers = chunk.map(file => {
+            return new Promise(res => {
+                const r = new FileReader();
+                r.onload = e => res(e.target.result);
+                r.readAsDataURL(file);
+            });
+        });
+
+        Promise.all(readers).then(images => {
+            spreads.push(images);
+            render();
+        });
+    }
 };
 
-fileInput.onchange = e => handleFiles(e.target.files);
+/* Render */
+function render() {
+    book.innerHTML = '';
 
-function handleFiles(files) {
-    Array.from(files).forEach(file => {
-        if (!file.type.startsWith('image/')) return;
+    spreads.forEach((imgs, i) => {
+        const spread = document.createElement('div');
+        spread.className = 'spread';
+        if (i < current) spread.classList.add('flipped');
 
-        const reader = new FileReader();
-        reader.onload = ev => {
-            pages.push({ photo: ev.target.result });
-            render();
-        };
-        reader.readAsDataURL(file);
+        const left = document.createElement('div');
+        left.className = 'page left';
+
+        const right = document.createElement('div');
+        right.className = 'page right';
+
+        imgs.forEach((src, index) => {
+            const photo = createPhoto(src);
+
+            if (index % 2 === 0) {
+                left.appendChild(photo);
+            } else {
+                right.appendChild(photo);
+            }
+        });
+
+        spread.appendChild(left);
+        spread.appendChild(right);
+        book.appendChild(spread);
     });
 }
 
-/* Create photo */
+/* Create draggable photo */
 function createPhoto(src) {
-    const frame = document.createElement('div');
-    frame.className = 'photo-frame';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'photo';
+    wrapper.style.left = Math.random()*200 + 'px';
+    wrapper.style.top = Math.random()*250 + 'px';
 
     const img = document.createElement('img');
     img.src = src;
@@ -181,105 +196,42 @@ function createPhoto(src) {
     const tape = document.createElement('div');
     tape.className = 'tape';
 
-    frame.appendChild(tape);
-    frame.appendChild(img);
+    wrapper.appendChild(tape);
+    wrapper.appendChild(img);
 
-    return frame;
+    makeDraggable(wrapper);
+
+    return wrapper;
 }
 
-/* Layouts */
-function layout1(container, photo) {
-    const torn = document.createElement('div');
-    torn.className = 'torn';
-    torn.style.top = '10px';
+/* Drag */
+function makeDraggable(el) {
+    let offsetX, offsetY;
 
-    const img = createPhoto(photo);
-    img.style.top = '80px';
-    img.style.left = '15%';
-    img.style.transform = 'rotate(-4deg)';
+    el.onmousedown = (e) => {
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
 
-    container.appendChild(torn);
-    container.appendChild(img);
-}
+        document.onmousemove = (e) => {
+            el.style.left = (e.pageX - book.offsetLeft - offsetX) + 'px';
+            el.style.top = (e.pageY - book.offsetTop - offsetY) + 'px';
+        };
 
-function layout2(container, photo) {
-    const img1 = createPhoto(photo);
-    img1.style.top = '60px';
-    img1.style.left = '10%';
-    img1.style.transform = 'rotate(-6deg)';
-
-    const img2 = createPhoto(photo);
-    img2.style.top = '140px';
-    img2.style.left = '30%';
-    img2.style.transform = 'rotate(5deg)';
-
-    container.appendChild(img1);
-    container.appendChild(img2);
-}
-
-function layout3(container, photo) {
-    const note = document.createElement('div');
-    note.className = 'torn';
-    note.style.top = '260px';
-    note.style.height = '100px';
-
-    const img = createPhoto(photo);
-    img.style.top = '60px';
-    img.style.left = '20%';
-
-    container.appendChild(img);
-    container.appendChild(note);
-}
-
-/* Random layout */
-function applyLayout(container, photo) {
-    const layouts = [layout1, layout2, layout3];
-    const pick = layouts[Math.floor(Math.random() * layouts.length)];
-    pick(container, photo);
-}
-
-/* Decorations */
-function addDecor(container) {
-    const emojis = ['✨','💖','🌸','🦋'];
-    for (let i = 0; i < 3; i++) {
-        const el = document.createElement('div');
-        el.innerText = emojis[Math.floor(Math.random()*emojis.length)];
-        el.style.position = 'absolute';
-        el.style.left = Math.random()*260 + 'px';
-        el.style.top = Math.random()*420 + 'px';
-        container.appendChild(el);
-    }
-}
-
-/* Render */
-function render() {
-    book.innerHTML = '';
-
-    pages.forEach((p, i) => {
-        const page = document.createElement('div');
-        page.className = 'page';
-        if (i < current) page.classList.add('flipped');
-
-        const content = document.createElement('div');
-        content.className = 'page-content paper';
-
-        applyLayout(content, p.photo);
-        addDecor(content);
-
-        page.appendChild(content);
-        book.appendChild(page);
-    });
+        document.onmouseup = () => {
+            document.onmousemove = null;
+        };
+    };
 }
 
 /* Navigation */
-function nextPage() {
-    if (current < pages.length) {
+function next() {
+    if (current < spreads.length) {
         current++;
         render();
     }
 }
 
-function prevPage() {
+function prev() {
     if (current > 0) {
         current--;
         render();
