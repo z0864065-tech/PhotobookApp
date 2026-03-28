@@ -25,23 +25,6 @@ body {
     cursor: pointer;
 }
 
-/* Toolbar */
-#toolbar {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 10px;
-}
-
-button, select {
-    padding: 6px 10px;
-    border-radius: 10px;
-    border: none;
-    background: #d8cfc4;
-    cursor: pointer;
-}
-
 /* Book */
 #book {
     width: 340px;
@@ -72,52 +55,72 @@ button, select {
     height: 100%;
     position: relative;
     padding: 10px;
-    background: #fffaf5;
 }
 
-/* Photo scrapbook style */
-.photo {
+/* Scrapbook paper */
+.paper {
+    background: #fdfaf6;
+    position: relative;
+}
+
+.paper::before {
+    content: "";
     position: absolute;
-    width: 70%;
-    left: 15%;
-    top: 20%;
-    transform: rotate(-3deg);
+    inset: 0;
+    background: 
+        radial-gradient(circle at 10% 10%, #00000008 2px, transparent 3px),
+        radial-gradient(circle at 90% 80%, #00000008 2px, transparent 3px);
+    opacity: 0.4;
+}
+
+/* Photo frame */
+.photo-frame {
+    position: absolute;
+    width: 65%;
     background: white;
     padding: 10px 10px 25px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-.photo img {
+.photo-frame img {
     width: 100%;
-    display: block;
 }
 
-/* Tape effect */
+/* Tape */
 .tape {
     position: absolute;
-    width: 60px;
-    height: 20px;
+    width: 80px;
+    height: 25px;
     background: rgba(255,255,200,0.6);
-    top: -10px;
-    left: calc(50% - 30px);
-    transform: rotate(5deg);
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-6deg);
 }
 
-/* Stickers */
-.sticker {
+/* Torn paper */
+.torn {
     position: absolute;
-    font-size: 28px;
-    cursor: grab;
+    width: 80%;
+    height: 120px;
+    background: #fff;
+    clip-path: polygon(
+        0% 10%, 5% 0%, 95% 0%, 100% 10%,
+        95% 100%, 5% 100%, 0% 90%
+    );
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-/* Cute themes */
-.bg1 { background: #fffaf5; }
-.bg2 { background: #fcefee; }
-.bg3 { background: #eef7f2; }
-.bg4 { background: #f0f3fc; }
-
+/* Controls */
 #controls {
     margin: 10px;
+}
+
+button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    background: #b8a99a;
+    cursor: pointer;
 }
 </style>
 </head>
@@ -126,22 +129,6 @@ button, select {
 
 <div id="drop-zone">📎 Add Memories</div>
 <input type="file" id="file-input" multiple accept="image/*" hidden>
-
-<div id="toolbar">
-    <select id="bgSelect">
-        <option value="">Paper</option>
-        <option value="bg1">Beige</option>
-        <option value="bg2">Pink</option>
-        <option value="bg3">Green</option>
-        <option value="bg4">Blue</option>
-    </select>
-
-    <button onclick="addSticker('💖')">💖</button>
-    <button onclick="addSticker('🌸')">🌸</button>
-    <button onclick="addSticker('✨')">✨</button>
-    <button onclick="addSticker('🦋')">🦋</button>
-    <button onclick="addSticker('⭐')">⭐</button>
-</div>
 
 <div id="book"></div>
 
@@ -154,7 +141,6 @@ button, select {
 const fileInput = document.getElementById('file-input');
 const dropZone = document.getElementById('drop-zone');
 const book = document.getElementById('book');
-const bgSelect = document.getElementById('bgSelect');
 
 let pages = [];
 let current = 0;
@@ -162,20 +148,108 @@ let current = 0;
 /* Upload */
 dropZone.onclick = () => fileInput.click();
 
-fileInput.onchange = e => {
-    Array.from(e.target.files).forEach(file => {
+dropZone.ondragover = e => e.preventDefault();
+
+dropZone.ondrop = e => {
+    e.preventDefault();
+    handleFiles(e.dataTransfer.files);
+};
+
+fileInput.onchange = e => handleFiles(e.target.files);
+
+function handleFiles(files) {
+    Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+
         const reader = new FileReader();
         reader.onload = ev => {
-            pages.push({
-                photo: ev.target.result,
-                stickers: [],
-                bg: "bg1"
-            });
+            pages.push({ photo: ev.target.result });
             render();
         };
         reader.readAsDataURL(file);
     });
-};
+}
+
+/* Create photo */
+function createPhoto(src) {
+    const frame = document.createElement('div');
+    frame.className = 'photo-frame';
+
+    const img = document.createElement('img');
+    img.src = src;
+
+    const tape = document.createElement('div');
+    tape.className = 'tape';
+
+    frame.appendChild(tape);
+    frame.appendChild(img);
+
+    return frame;
+}
+
+/* Layouts */
+function layout1(container, photo) {
+    const torn = document.createElement('div');
+    torn.className = 'torn';
+    torn.style.top = '10px';
+
+    const img = createPhoto(photo);
+    img.style.top = '80px';
+    img.style.left = '15%';
+    img.style.transform = 'rotate(-4deg)';
+
+    container.appendChild(torn);
+    container.appendChild(img);
+}
+
+function layout2(container, photo) {
+    const img1 = createPhoto(photo);
+    img1.style.top = '60px';
+    img1.style.left = '10%';
+    img1.style.transform = 'rotate(-6deg)';
+
+    const img2 = createPhoto(photo);
+    img2.style.top = '140px';
+    img2.style.left = '30%';
+    img2.style.transform = 'rotate(5deg)';
+
+    container.appendChild(img1);
+    container.appendChild(img2);
+}
+
+function layout3(container, photo) {
+    const note = document.createElement('div');
+    note.className = 'torn';
+    note.style.top = '260px';
+    note.style.height = '100px';
+
+    const img = createPhoto(photo);
+    img.style.top = '60px';
+    img.style.left = '20%';
+
+    container.appendChild(img);
+    container.appendChild(note);
+}
+
+/* Random layout */
+function applyLayout(container, photo) {
+    const layouts = [layout1, layout2, layout3];
+    const pick = layouts[Math.floor(Math.random() * layouts.length)];
+    pick(container, photo);
+}
+
+/* Decorations */
+function addDecor(container) {
+    const emojis = ['✨','💖','🌸','🦋'];
+    for (let i = 0; i < 3; i++) {
+        const el = document.createElement('div');
+        el.innerText = emojis[Math.floor(Math.random()*emojis.length)];
+        el.style.position = 'absolute';
+        el.style.left = Math.random()*260 + 'px';
+        el.style.top = Math.random()*420 + 'px';
+        container.appendChild(el);
+    }
+}
 
 /* Render */
 function render() {
@@ -187,33 +261,10 @@ function render() {
         if (i < current) page.classList.add('flipped');
 
         const content = document.createElement('div');
-        content.className = 'page-content ' + (p.bg || '');
+        content.className = 'page-content paper';
 
-        /* Photo frame */
-        const frame = document.createElement('div');
-        frame.className = 'photo';
-
-        const img = document.createElement('img');
-        img.src = p.photo;
-
-        const tape = document.createElement('div');
-        tape.className = 'tape';
-
-        frame.appendChild(tape);
-        frame.appendChild(img);
-        content.appendChild(frame);
-
-        /* Stickers */
-        p.stickers.forEach(s => {
-            const el = document.createElement('div');
-            el.className = 'sticker';
-            el.textContent = s.text;
-            el.style.left = s.x + 'px';
-            el.style.top = s.y + 'px';
-
-            makeDraggable(el, s);
-            content.appendChild(el);
-        });
+        applyLayout(content, p.photo);
+        addDecor(content);
 
         page.appendChild(content);
         book.appendChild(page);
@@ -234,49 +285,6 @@ function prevPage() {
         render();
     }
 }
-
-/* Background */
-bgSelect.onchange = () => {
-    if (!pages[current]) return;
-    pages[current].bg = bgSelect.value;
-    render();
-};
-
-/* Stickers */
-function addSticker(text) {
-    if (!pages[current]) return;
-
-    pages[current].stickers.push({
-        text,
-        x: 50,
-        y: 50
-    });
-
-    render();
-}
-
-/* Drag */
-function makeDraggable(el, data) {
-    let offsetX, offsetY;
-
-    el.onmousedown = e => {
-        offsetX = e.offsetX;
-        offsetY = e.offsetY;
-
-        document.onmousemove = e => {
-            data.x = e.pageX - book.offsetLeft - offsetX;
-            data.y = e.pageY - book.offsetTop - offsetY;
-            el.style.left = data.x + 'px';
-            el.style.top = data.y + 'px';
-        };
-
-        document.onmouseup = () => {
-            document.onmousemove = null;
-        };
-    };
-}
-
-render();
 </script>
 
 </body>
