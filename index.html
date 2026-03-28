@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photobook App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        #drop-zone { border: 3px dashed #ccc; padding: 50px; text-align: center; margin: 20px 0; cursor: pointer; }
+        #drop-zone.dragover { border-color: #007bff; background: #f8f9fa; }
+        #thumbnails { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+        .thumbnail { width: 100px; height: 100px; object-fit: cover; cursor: pointer; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .thumbnail:hover { transform: scale(1.05); }
+        #book { max-width: 800px; margin: 20px auto; position: relative; height: 600px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .page { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
+        .page.active { opacity: 1; }
+        .photo { max-width: 90%; max-height: 80%; object-fit: contain; cursor: pointer; border-radius: 10px; margin: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .photo:hover { transform: rotate(5deg); }
+        #nav { text-align: center; margin: 20px 0; }
+        button { padding: 10px 20px; margin: 0 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #status { text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>My Photobook</h1>
+    <div id="drop-zone">Drag & drop photos here or click to upload</div>
+    <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+    <div id="thumbnails"></div>
+    <div id="book"></div>
+    <div id="nav">
+        <button onclick="prevPage()">← Previous</button>
+        <span id="page-info">Page 1</span>
+        <button onclick="nextPage()">Next →</button>
+    </div>
+    <p id="status">Upload photos to start your book!</p>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const thumbnails = document.getElementById('thumbnails');
+        const book = document.getElementById('book');
+        const status = document.getElementById('status');
+        const pageInfo = document.getElementById('page-info');
+
+        let images = []; // Store image data URLs
+        let currentPage = 0;
+        const photosPerPage = 4;
+        let positions = [[10,10,50,60], [20,40,55,65]]; // Sample positions % for 2 photos/page; extend as needed
+
+        // Setup drop zone
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        images.push(e.target.result);
+                        updateThumbnails();
+                        updateBook();
+                        status.textContent = `Added ${images.length} photos.`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function updateThumbnails() {
+            thumbnails.innerHTML = '';
+            images.forEach((src, i) => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'thumbnail';
+                img.onclick = () => goToPage(Math.floor(i / photosPerPage));
+                thumbnails.appendChild(img);
+            });
+        }
+
+        function updateBook() {
+            book.innerHTML = '';
+            const totalPages = Math.ceil(images.length / photosPerPage);
+            for (let p = 0; p < totalPages; p++) {
+                const page = document.createElement('div');
+                page.className = 'page';
+                if (p === currentPage) page.classList.add('active');
+                const start = p * photosPerPage;
+                for (let i = 0; i < photosPerPage && start + i < images.length; i++) {
+                    const photo = document.createElement('img');
+                    photo.src = images[start + i];
+                    photo.className = 'photo';
+                    photo.style.left = positions[i % 2][0] + '%';
+                    photo.style.top = positions[i % 2][1] + '%';
+                    photo.onclick = () => cyclePosition(photo);
+                    page.appendChild(photo);
+                }
+                book.appendChild(page);
+            }
+            pageInfo.textContent = `Page ${currentPage + 1} / ${totalPages}`;
+        }
+
+        function goToPage(page) {
+            document.querySelector('.page.active')?.classList.remove('active');
+            currentPage = page;
+            updateBook();
+        }
+
+        function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+        function nextPage() {
+            const total = Math.ceil(images.length / photosPerPage);
+            if (currentPage < total - 1) goToPage(currentPage + 1);
+        }
+
+        function cyclePosition(photo) {
+            const posIndex = parseInt(photo.dataset.pos) || 0;
+            const newPos = (posIndex + 1) % positions.length;
+            photo.dataset.pos = newPos;
+            photo.style.left = positions[newPos][0] + '%';
+            photo.style.top = positions[newPos][1] + '%';
+        }
+
+        // Initial setup
+        updateBook();
+    </script>
+</body>
+</html>
