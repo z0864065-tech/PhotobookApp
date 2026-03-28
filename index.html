@@ -1,242 +1,736 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Digital Scrapbook</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pro Digital Scrapbook</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500&family=Playfair+Display&display=swap" rel="stylesheet" />
 
 <style>
-body {
-    margin: 0;
-    background: linear-gradient(135deg,#6c6f8a,#4a4e69);
+  /* === Global & Reset === */
+  body, html {
+    margin: 0; padding: 0;
+    height: 100%;
+    background: #1e1f26;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    user-select: none;
+    overflow: hidden;
+    display: flex;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    background: #2f80ed;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background 0.3s ease;
+  }
+  button:hover {
+    background: #155db2;
+  }
+  h3 {
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 12px;
+  }
+
+  /* === Layout === */
+  .sidebar {
+    width: 70px;
+    background: #2a2b34;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-family: sans-serif;
-}
+    padding-top: 12px;
+    border-right: 1px solid #444;
+  }
+  .sidebar button {
+    background: none;
+    font-size: 24px;
+    margin: 20px 0;
+    padding: 0;
+    color: white;
+  }
+  .sidebar button.active {
+    color: #2f80ed;
+  }
 
-/* Upload */
-#upload {
-    margin: 15px;
-    padding: 10px 15px;
-    background: white;
-    border-radius: 10px;
-    cursor: pointer;
-}
+  .panel {
+    width: 260px;
+    background: #25262f;
+    padding: 15px 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
 
-/* Book container */
-.book {
-    width: 700px;
-    height: 450px;
-    position: relative;
-    perspective: 2000px;
-}
-
-/* Spread */
-.spread {
-    width: 100%;
-    height: 100%;
+  .workspace {
+    flex: 1;
     display: flex;
-    position: absolute;
-}
+    flex-direction: column;
+  }
 
-/* Pages */
-.page {
-    width: 50%;
-    height: 100%;
-    background: #fdfaf6;
+  .topbar {
+    height: 60px;
+    background: #2a2b34;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid #444;
+    font-weight: 600;
+  }
+
+  .canvas {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #282a36;
+    overflow: visible;
+    perspective: 3500px;
+  }
+
+  /* === Book Container & Pages === */
+  .book {
+    width: 850px;
+    height: 540px;
     position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
-}
+    box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+    border-radius: 16px;
+    background: linear-gradient(135deg,#fefefe,#e6e2d3);
+    overflow: visible;
+  }
 
-/* Spine */
-.page.left {
-    border-right: 2px solid #ddd;
-}
-.page.right {
-    border-left: 2px solid #ddd;
-}
-
-/* Flip animation */
-.spread {
-    transform-origin: left;
-    transition: transform 0.8s ease;
-}
-.spread.flipped {
-    transform: rotateY(-180deg);
-}
-
-/* Photo */
-.photo {
+  .page {
     position: absolute;
-    width: 120px;
-    cursor: grab;
-    transform: rotate(-3deg);
-}
-
-.photo img {
     width: 100%;
-    border: 8px solid white;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
+    height: 100%;
+    top: 0; left: 0;
+    transform-style: preserve-3d;
+    transform-origin: left;
+    box-shadow:
+      inset 0 0 50px #ccc,
+      0 15px 40px rgba(0,0,0,0.3);
+    background: #faf7f2;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 1.2s cubic-bezier(0.4,0,0.2,1);
+    cursor: grab;
+  }
+  .page.flipped {
+    transform: rotateY(-180deg);
+    box-shadow:
+      inset 0 0 80px #bbb,
+      0 10px 20px rgba(0,0,0,0.15);
+  }
 
-/* Tape */
-.tape {
+  /* front and back sides */
+  .side {
     position: absolute;
-    width: 50px;
-    height: 15px;
-    background: rgba(255,255,200,0.7);
-    top: -10px;
-    left: 30%;
-    transform: rotate(-5deg);
-}
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    overflow: hidden;
+    padding: 30px;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-content: flex-start;
+  }
+  .side.back {
+    transform: rotateY(180deg);
+    background: #f9f6f0;
+  }
 
-/* Controls */
-#controls {
-    margin-top: 15px;
-}
+  /* Photo styling */
+  .photo {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.2s ease;
+  }
+  .photo img {
+    max-width: 180px;
+    max-height: 150px;
+    border: 14px solid white;
+    border-radius: 14px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+    display: block;
+  }
+  .photo.selected {
+    box-shadow:
+      0 0 20px 5px #2f80ed,
+      0 0 40px 8px #2f80ed;
+    cursor: grabbing;
+    z-index: 1000;
+  }
 
-button {
-    padding: 10px;
-    margin: 5px;
-    border: none;
-    border-radius: 6px;
+  /* Text box */
+  .text-box {
+    position: absolute;
+    min-width: 120px;
+    max-width: 280px;
+    padding: 6px 12px;
     background: white;
+    color: #333;
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    cursor: grab;
+    user-select: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    resize: both;
+    overflow: auto;
+  }
+  .text-box.selected {
+    outline: 3px solid #2f80ed;
+    cursor: grabbing;
+    z-index: 1000;
+  }
+  .text-box[contenteditable]:focus {
+    outline: 3px solid #2f80ed;
+  }
+
+  /* Sticker */
+  .sticker {
+    position: absolute;
+    font-size: 36px;
+    cursor: grab;
+    user-select: none;
+    transition: transform 0.15s ease;
+  }
+  .sticker.selected {
+    outline: 2px solid #2f80ed;
+    border-radius: 8px;
+    cursor: grabbing;
+    z-index: 1000;
+  }
+
+  /* Toolbar Panel Content */
+  .panel h3 {
+    margin-top: 0;
+  }
+  .panel button.sticker-btn {
+    font-size: 28px;
+    background: none;
+    margin: 6px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: border-color 0.2s ease;
+  }
+  .panel button.sticker-btn:hover {
+    border-color: #2f80ed;
+    background: rgba(47,128,237,0.15);
+  }
+
+  /* Topbar text editor */
+  #text-controls {
+    display: none;
+    align-items: center;
+    gap: 12px;
+  }
+  #text-controls.active {
+    display: flex;
+  }
+  #text-controls label {
+    font-weight: 500;
+    font-size: 14px;
+  }
+  #text-controls input[type=color],
+  #text-controls input[type=number] {
     cursor: pointer;
-}
+  }
+  #text-controls input[type=number] {
+    width: 50px;
+  }
+
 </style>
 </head>
 
 <body>
 
-<div id="upload">📎 Upload Photos</div>
-<input type="file" id="fileInput" multiple accept="image/*" hidden>
+<!-- Sidebar -->
+<div class="sidebar" role="toolbar" aria-label="Main tools">
+  <button id="photos-btn" class="active" title="Photos 📷" aria-pressed="true">📷</button>
+  <button id="text-btn" title="Add Text ✍️" aria-pressed="false">✍️</button>
+  <button id="stickers-btn" title="Add Stickers ✨" aria-pressed="false">✨</button>
+</div>
 
-<div class="book" id="book"></div>
+<!-- Left Panel -->
+<div class="panel" id="panel" aria-label="Tool panel">
+  <h3>Photos</h3>
+  <input type="file" id="upload" accept="image/*" multiple />
+</div>
 
-<div id="controls">
-    <button onclick="prev()">←</button>
-    <button onclick="next()">→</button>
+<!-- Workspace -->
+<div class="workspace" role="main">
+  <div class="topbar">
+    <div>📖 Scrapbook Studio Pro</div>
+    <div>
+      <button id="prev-page" aria-label="Previous page">←</button>
+      <button id="next-page" aria-label="Next page">→</button>
+      <button id="delete-element" aria-label="Delete selected element" title="Delete selected element" style="display:none; margin-left: 12px; background: #e74c3c;">🗑️</button>
+    </div>
+  </div>
+
+  <div class="canvas" id="canvas" aria-label="Book canvas">
+    <div class="book" id="book"></div>
+  </div>
+
+  <!-- Text Controls -->
+  <div class="panel" id="text-controls" aria-label="Text editing controls" style="display:none;">
+    <label for="font-size">Font size:</label>
+    <input type="number" id="font-size" min="10" max="72" value="20" />
+    <label for="font-color">Color:</label>
+    <input type="color" id="font-color" value="#333333" />
+  </div>
 </div>
 
 <script>
-const fileInput = document.getElementById('fileInput');
-const upload = document.getElementById('upload');
-const book = document.getElementById('book');
+(() => {
+  // Core state
+  let pages = [];
+  let currentPage = 0;
+  let selectedElement = null;
 
-let spreads = [];
-let current = 0;
+  // DOM refs
+  const book = document.getElementById('book');
+  const upload = document.getElementById('upload');
+  const panel = document.getElementById('panel');
+  const photosBtn = document.getElementById('photos-btn');
+  const textBtn = document.getElementById('text-btn');
+  const stickersBtn = document.getElementById('stickers-btn');
+  const prevPageBtn = document.getElementById('prev-page');
+  const nextPageBtn = document.getElementById('next-page');
+  const deleteBtn = document.getElementById('delete-element');
+  const textControls = document.getElementById('text-controls');
+  const fontSizeInput = document.getElementById('font-size');
+  const fontColorInput = document.getElementById('font-color');
 
-/* Upload */
-upload.onclick = () => fileInput.click();
+  // === Utils ===
+  function clamp(num, min, max) {
+    return Math.min(Math.max(num, min), max);
+  }
 
-fileInput.onchange = (e) => {
+  // === Panel switching ===
+  function setActiveTool(tool) {
+    photosBtn.classList.remove('active');
+    photosBtn.setAttribute('aria-pressed', 'false');
+    textBtn.classList.remove('active');
+    textBtn.setAttribute('aria-pressed', 'false');
+    stickersBtn.classList.remove('active');
+    stickersBtn.setAttribute('aria-pressed', 'false');
+
+    if (tool === 'photos') {
+      photosBtn.classList.add('active');
+      photosBtn.setAttribute('aria-pressed', 'true');
+      showPhotosPanel();
+    } else if (tool === 'text') {
+      textBtn.classList.add('active');
+      textBtn.setAttribute('aria-pressed', 'true');
+      showTextPanel();
+    } else if (tool === 'stickers') {
+      stickersBtn.classList.add('active');
+      stickersBtn.setAttribute('aria-pressed', 'true');
+      showStickersPanel();
+    }
+  }
+
+  // === Panels content ===
+  function showPhotosPanel() {
+    panel.style.display = 'block';
+    panel.innerHTML = `
+      <h3>Photos</h3>
+      <input type="file" id="upload" accept="image/*" multiple />
+    `;
+    document.getElementById('upload').addEventListener('change', handleUpload);
+    textControls.style.display = 'none';
+    deleteBtn.style.display = 'none';
+  }
+
+  function showTextPanel() {
+    panel.style.display = 'block';
+    panel.innerHTML = `
+      <h3>Text</h3>
+      <button id="add-text-btn">Add Text Box</button>
+    `;
+    document.getElementById('add-text-btn').addEventListener('click', () => {
+      addText();
+      setActiveTool('text');
+    });
+    textControls.style.display = 'flex';
+    updateTextControls();
+    deleteBtn.style.display = selectedElement ? 'inline-block' : 'none';
+  }
+
+  function showStickersPanel() {
+    panel.style.display = 'block';
+    panel.innerHTML = `
+      <h3>Stickers</h3>
+      <button class="sticker-btn">💖</button>
+      <button class="sticker-btn">✨</button>
+      <button class="sticker-btn">🌸</button>
+      <button class="sticker-btn">🐾</button>
+      <button class="sticker-btn">📸</button>
+    `;
+
+    [...panel.querySelectorAll('.sticker-btn')].forEach(btn => {
+      btn.addEventListener('click', () => {
+        addSticker(btn.textContent);
+        setActiveTool('stickers');
+      });
+    });
+    textControls.style.display = 'none';
+    deleteBtn.style.display = 'none';
+  }
+
+  // === Handle upload ===
+  function handleUpload(e) {
     const files = Array.from(e.target.files);
 
     for (let i = 0; i < files.length; i += 3) {
-        const chunk = files.slice(i, i + 3);
-
-        const readers = chunk.map(file => {
-            return new Promise(res => {
-                const r = new FileReader();
-                r.onload = e => res(e.target.result);
-                r.readAsDataURL(file);
-            });
+      Promise.all(files.slice(i, i + 3).map(file => {
+        return new Promise(res => {
+          const r = new FileReader();
+          r.onload = ev => res(ev.target.result);
+          r.readAsDataURL(file);
         });
-
-        Promise.all(readers).then(images => {
-            spreads.push(images);
-            render();
-        });
+      })).then(imgs => {
+        pages.push({ images: imgs, elements: [] });
+        if (pages.length === 1) currentPage = 0;
+        renderBook();
+      });
     }
-};
+  }
 
-/* Render */
-function render() {
+  // === Render book ===
+  function renderBook() {
     book.innerHTML = '';
 
-    spreads.forEach((imgs, i) => {
-        const spread = document.createElement('div');
-        spread.className = 'spread';
-        if (i < current) spread.classList.add('flipped');
+    pages.forEach((pageData, i) => {
+      const page = document.createElement('div');
+      page.classList.add('page');
+      if (i < currentPage) page.classList.add('flipped');
 
-        const left = document.createElement('div');
-        left.className = 'page left';
+      // Create front and back sides
+      const front = createSide(pageData);
+      const back = createSide(pageData, true);
 
-        const right = document.createElement('div');
-        right.className = 'page right';
+      page.appendChild(front);
+      page.appendChild(back);
 
-        imgs.forEach((src, index) => {
-            const photo = createPhoto(src);
+      // Page click for flip
+      page.addEventListener('click', e => {
+        if (e.target !== page) return; // only if background clicked
+        if (i === currentPage) {
+          flipForward();
+        } else if (i === currentPage - 1) {
+          flipBackward();
+        }
+      });
 
-            if (index % 2 === 0) {
-                left.appendChild(photo);
-            } else {
-                right.appendChild(photo);
-            }
-        });
-
-        spread.appendChild(left);
-        spread.appendChild(right);
-        book.appendChild(spread);
+      book.appendChild(page);
     });
-}
 
-/* Create draggable photo */
-function createPhoto(src) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'photo';
-    wrapper.style.left = Math.random()*200 + 'px';
-    wrapper.style.top = Math.random()*250 + 'px';
+    updateNavButtons();
+  }
+
+  // === Create side ===
+  function createSide(pageData, back = false) {
+    const side = document.createElement('div');
+    side.className = 'side' + (back ? ' back' : '');
+
+    // Create sheets (2 sides = 2 sheets)
+    const leftSheet = createSheet(pageData);
+    const rightSheet = createSheet(pageData);
+
+    side.appendChild(leftSheet);
+    side.appendChild(rightSheet);
+
+    return side;
+  }
+
+  // === Create sheet ===
+  function createSheet(pageData) {
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet';
+
+    // Add images as photos
+    pageData.images.forEach(src => {
+      const photo = createPhoto(src);
+      sheet.appendChild(photo);
+    });
+
+    // Add other elements (text, stickers)
+    pageData.elements.forEach(el => {
+      sheet.appendChild(el);
+    });
+
+    return sheet;
+  }
+
+  // === Create photo element ===
+  function createPhoto(src) {
+    const div = document.createElement('div');
+    div.className = 'photo';
+    div.style.left = Math.random() * 600 + 'px';
+    div.style.top = Math.random() * 350 + 'px';
+    div.style.transform = `rotate(${(Math.random() * 20) - 10}deg)`;
 
     const img = document.createElement('img');
     img.src = src;
+    div.appendChild(img);
 
-    const tape = document.createElement('div');
-    tape.className = 'tape';
+    makeInteractable(div);
 
-    wrapper.appendChild(tape);
-    wrapper.appendChild(img);
+    return div;
+  }
 
-    makeDraggable(wrapper);
+  // === Add text box ===
+  function addText() {
+    if (!pages[currentPage]) pages[currentPage] = { images: [], elements: [] };
 
-    return wrapper;
-}
+    const div = document.createElement('div');
+    div.className = 'text-box';
+    div.contentEditable = 'true';
+    div.spellcheck = false;
+    div.style.left = '150px';
+    div.style.top = '150px';
+    div.style.fontSize = '20px';
+    div.innerText = 'Double-click to edit';
 
-/* Drag */
-function makeDraggable(el) {
-    let offsetX, offsetY;
+    makeInteractable(div);
 
-    el.onmousedown = (e) => {
-        offsetX = e.offsetX;
-        offsetY = e.offsetY;
+    pages[currentPage].elements.push(div);
+    renderBook();
+    selectElement(div);
+  }
 
-        document.onmousemove = (e) => {
-            el.style.left = (e.pageX - book.offsetLeft - offsetX) + 'px';
-            el.style.top = (e.pageY - book.offsetTop - offsetY) + 'px';
-        };
+  // === Add sticker ===
+  function addSticker(icon) {
+    if (!pages[currentPage]) pages[currentPage] = { images: [], elements: [] };
 
-        document.onmouseup = () => {
-            document.onmousemove = null;
-        };
-    };
-}
+    const div = document.createElement('div');
+    div.className = 'sticker';
+    div.textContent = icon;
+    div.style.left = '150px';
+    div.style.top = '150px';
+    div.style.transform = `rotate(${(Math.random() * 20) - 10}deg)`;
 
-/* Navigation */
-function next() {
-    if (current < spreads.length) {
-        current++;
-        render();
+    makeInteractable(div);
+
+    pages[currentPage].elements.push(div);
+    renderBook();
+    selectElement(div);
+  }
+
+  // === Make element draggable, resizable, rotatable & selectable ===
+  function makeInteractable(el) {
+    el.style.position = 'absolute';
+    el.style.zIndex = 10;
+
+    // Dragging variables
+    let drag = false, rotate = false;
+    let startX, startY, startLeft, startTop, startRotate = 0;
+
+    // For rotation detection (right click drag)
+    el.addEventListener('mousedown', e => {
+      if (e.button === 2) {
+        rotate = true;
+        startRotate = getRotationDegrees(el);
+        startX = e.clientX;
+        e.preventDefault();
+      } else if (e.button === 0) {
+        drag = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = parseFloat(el.style.left) || 0;
+        startTop = parseFloat(el.style.top) || 0;
+        selectElement(el);
+      }
+    });
+
+    // Drag & rotate on mousemove
+    window.addEventListener('mousemove', e => {
+      if (drag) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        el.style.left = clamp(startLeft + dx, 0, 650) + 'px';
+        el.style.top = clamp(startTop + dy, 0, 420) + 'px';
+      }
+      if (rotate) {
+        const dx = e.clientX - startX;
+        let newRot = startRotate + dx * 0.8;
+        el.style.transform = `rotate(${newRot}deg)`;
+      }
+    });
+
+    // End drag or rotate
+    window.addEventListener('mouseup', () => {
+      drag = false;
+      rotate = false;
+    });
+
+    // Allow resizing only for text boxes
+    if (el.classList.contains('text-box')) {
+      el.style.resize = 'both';
+      el.style.overflow = 'auto';
+      el.addEventListener('mousedown', e => e.stopPropagation());
     }
-}
 
-function prev() {
-    if (current > 0) {
-        current--;
-        render();
+    // Select on click
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      selectElement(el);
+    });
+
+    // Disable context menu on right click for rotation
+    el.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  // === Select an element ===
+  function selectElement(el) {
+    if (selectedElement) {
+      selectedElement.classList.remove('selected');
+      saveElementState(selectedElement);
     }
-}
+    selectedElement = el;
+    if (el) {
+      el.classList.add('selected');
+      showDelete(true);
+      if (el.classList.contains('text-box')) {
+        textControls.classList.add('active');
+        updateTextControls();
+      } else {
+        textControls.classList.remove('active');
+      }
+    } else {
+      showDelete(false);
+      textControls.classList.remove('active');
+    }
+  }
+
+  // Save element properties back to data model
+  function saveElementState(el) {
+    if (!el) return;
+    const page = pages[currentPage];
+    if (!page) return;
+    // Elements are objects stored in page.elements, which are DOM nodes directly
+    // So no extra sync needed here unless you want to store positions separately
+  }
+
+  // === Update nav buttons ===
+  function updateNavButtons() {
+    prevPageBtn.disabled = currentPage <= 0;
+    nextPageBtn.disabled = currentPage >= pages.length;
+  }
+
+  // === Flip pages ===
+  function flipForward() {
+    if (currentPage < pages.length) {
+      currentPage++;
+      renderBook();
+      selectElement(null);
+    }
+  }
+  function flipBackward() {
+    if (currentPage > 0) {
+      currentPage--;
+      renderBook();
+      selectElement(null);
+    }
+  }
+
+  // === Update text controls UI ===
+  function updateTextControls() {
+    if (!selectedElement || !selectedElement.classList.contains('text-box')) return;
+    fontSizeInput.value = parseInt(window.getComputedStyle(selectedElement).fontSize);
+    fontColorInput.value = rgbToHex(window.getComputedStyle(selectedElement).color);
+  }
+
+  // === Convert rgb to hex ===
+  function rgbToHex(rgb) {
+    const result = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(rgb);
+    if (!result) return '#333333';
+    return '#' + [1,2,3].map(i => {
+      let hex = parseInt(result[i]).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+  }
+
+  // === Handle text control changes ===
+  fontSizeInput.addEventListener('input', () => {
+    if (selectedElement && selectedElement.classList.contains('text-box')) {
+      selectedElement.style.fontSize = fontSizeInput.value + 'px';
+    }
+  });
+  fontColorInput.addEventListener('input', () => {
+    if (selectedElement && selectedElement.classList.contains('text-box')) {
+      selectedElement.style.color = fontColorInput.value;
+    }
+  });
+
+  // === Delete selected element ===
+  deleteBtn.addEventListener('click', () => {
+    if (!selectedElement) return;
+
+    // Remove from DOM
+    selectedElement.remove();
+
+    // Remove from data model
+    const elements = pages[currentPage].elements;
+    const idx = elements.indexOf(selectedElement);
+    if (idx > -1) elements.splice(idx, 1);
+
+    selectElement(null);
+  });
+
+  // Delete with keyboard (delete/backspace)
+  window.addEventListener('keydown', e => {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+      deleteBtn.click();
+    }
+  });
+
+  // === Helpers ===
+  function getRotationDegrees(el) {
+    const st = window.getComputedStyle(el, null);
+    const tr = st.getPropertyValue("transform");
+    if (tr === 'none') return 0;
+    const values = tr.split('(')[1].split(')')[0].split(',');
+    const a = values[0], b = values[1];
+    const angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+    return angle;
+  }
+
+  // === Event handlers ===
+  upload.addEventListener('change', handleUpload);
+  prevPageBtn.addEventListener('click', flipBackward);
+  nextPageBtn.addEventListener('click', flipForward);
+
+  photosBtn.addEventListener('click', () => setActiveTool('photos'));
+  textBtn.addEventListener('click', () => setActiveTool('text'));
+  stickersBtn.addEventListener('click', () => setActiveTool('stickers'));
+
+  book.addEventListener('click', () => {
+    // Clicking on empty book deselects
+    selectElement(null);
+  });
+
+  // === Initialize ===
+  setActiveTool('photos');
+  renderBook();
+
+})();
 </script>
 
 </body>
